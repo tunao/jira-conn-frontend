@@ -1,22 +1,41 @@
 <template>
-    <div>
-        <div>
-            <v-select
-                label="Select"
-                v-model="projectName"
-                :items="['FEEDUVL', 'ISWRE22T1']"
-            ></v-select>
-
-            <v-btn dark color="blue" @click="setProjectName()"> SEARCH </v-btn>
+    <div class="container">
+        <div class="banner">
+            <v-banner style="background-color: dodgerblue">
+                Jira Connection
+            </v-banner>
         </div>
+        <div class="project-import">
+            <v-text-field v-model="projectName" append-icon="mdi-magnify" label="which project do you want to import ..."></v-text-field>
+            <v-btn dark color="blue" @click="getIssuesByProjectName()"> SEARCH </v-btn>
+        </div>
+        <v-dialog v-model="dialog" width="70%" >
+            <v-overlay v-if="loading">
+                <v-progress-circular indeterminate size="64">
+                    Loading...
+                </v-progress-circular>
+            </v-overlay>
+            <v-data-table
+                v-model="selected"
+                :headers="headers"
+                :items="getData"
+                item-key="issueId"
+                show-select
+                class="elevation-1"
+            >
+                <template v-slot:top>
+                    <v-text-field v-model="search" append-icon="mdi-magnify" label=" Search in table..."></v-text-field>
+                </template>
+            </v-data-table>
+            <v-btn @click="saveSelectedIssues()">Import</v-btn>
+            <v-btn @click="closeDialog()">Close</v-btn>
+        </v-dialog>
         <div>
             <v-card class="v-card">
-
                 <v-data-table
                     :headers="headers"
-                    :items="issues"
-                    item-value="id"
-                    sort-by="issueId"
+                    :items="getData"
+                    item-key="issueId"
                     class="elevation-1"
                     :footer-props="{
                'items-per-page-text':'Issues per Page',
@@ -27,14 +46,9 @@
                     :server-items-length="this.totalItems"
                     @update:items-per-page="getItemPerPage"
                     @update:page="getPageNum"
-
                 >
                     <template v-slot:top>
-                        <v-text-field
-                            v-model="search"
-                            append-icon="mdi-magnify"
-                            label="Suche"
-                        ></v-text-field>
+                        <v-text-field v-model="search" append-icon="mdi-magnify" label=" Search in table..."></v-text-field>
                     </template>
                 </v-data-table>
             </v-card>
@@ -59,68 +73,79 @@ export default {
                 },
                 {text: "Issue ID", value: "issueId"},
                 {text: "Issue Name", value: "key"},
-                {text: "Project Name", value: "projectName"}
+                {text: "Issue Type", value: "issueType"},
+                {text: "Project Name", value: "projectName"},
             ],
             issues: [],
             search:"",
             totalItems: 0,
             pageNum: 1,
-            pageSize: 5,
+            pageSize: 10,
             projectName: "",
+            dialog: false,
+            selected: [],
+            loading: false,
         }
     },
     methods: {
-        getIssuesFromNewProject() {
-            IssuesService.getIssuesFromNewProject(this.projectName).then(
-                this.getIssuesPage
-            )
+        getIssuesByProjectName(){
+            this.dialog = true
+            this.loading = true
+            IssuesService.getIssuesByProjectName(this.projectName).then((response) => {
+                this.issues = response.data
+                this.loading = false
+            })
         },
-        getIssuesPage() {
-            IssuesService.getIssuesPage(this.projectName, this.pageNum, this.pageSize).then((response) => {
-                    const {issues, totalItems} = response.data;
+        saveSelectedIssues(){
+            this.dialog = false
+            IssuesService.saveIssues(this.selected).then((response) => {
+                this.issues = response.data
+            })
+        },
+        closeDialog(){
+            this.dialog = false;
+        },
+        getAllIssues() {
+            IssuesService.getAllIssues(this.pageNum, this.pageSize).then((response) => {
+                const {issues, totalItems} = response.data;
+                if(this.search === ""){
                     this.issues = issues
                     this.totalItems = totalItems
-
-                    console.log(response.data)
-                    console.log(totalItems)
+                }else{
+                    this.filterData()
+                }
+                console.log(this.issues)
+                console.log(totalItems)
             })
         },
         getItemPerPage(val) {
             this.pageSize = val;
-            this.getIssuesPage()
+            this.getAllIssues()
         },
         getPageNum(val) {
             this.pageNum = val
-            this.getIssuesPage()
+            this.getAllIssues()
         },
-        setProjectName(){
-            this.getIssuesFromNewProject()
-        }
     },
     computed: {
         getData(){
             if(this.search === ""){
                 return this.issues
             }else{
-                return this.filterData()
+                return this.filterData
             }
-
         },
         filterData(){
-            const issues = this.issues
-            const newIssues = []
-            issues.filter(item => {
-                let id = item.id.toLowerCase().includes(this.search.toLowerCase())
-                if(id === true){
-                    newIssues.push(item)
-                }
+            return this.issues.filter(item =>{
+                return item.issueId.toLowerCase().indexOf(this.search.toLowerCase()) > -1
+                    || item.key.toLowerCase().indexOf(this.search.toLowerCase()) > -1
+                    || item.issueType.toLowerCase().indexOf(this.search.toLowerCase()) > -1
+                    || item.projectName.toLowerCase().indexOf(this.search.toLowerCase()) > -1
             })
-            return issues
         }
     },
     created() {
-        this.getIssuesPage()
-        this.getIssuesFromNewProject()
+        this.getAllIssues()
     },
 
 }
@@ -132,5 +157,14 @@ export default {
     margin-left: auto;
     margin-right: auto;
     margin-top: 80px;
+}
+.project-import{
+    margin-top: 40px;
+    width: 90%;
+    margin-left: auto;
+    margin-right: auto;
+}
+.banner{
+    color: wheat;
 }
 </style>
