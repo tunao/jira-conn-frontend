@@ -1,12 +1,11 @@
 import axios from 'axios'
 
-const ISSUE_API_BASE_URL ='http://localhost:8080/api/issues'
+const ISSUE_API_BASE_URL ='http://localhost:8080/hitec/jira/issues'
 
 class IssuesService {
 
     saveIssues(issues){
         var parsedobj = JSON.parse(JSON.stringify(issues))
-        console.log(parsedobj)
         return axios.post(ISSUE_API_BASE_URL, {
             jsonObject: parsedobj,
         })

@@ -14,6 +14,7 @@
                 <v-progress-circular indeterminate size="64">
                     Loading...
                 </v-progress-circular>
+                <v-btn @click="closeDialog()" style="margin-top: 200px">CLOSE</v-btn>
             </v-overlay>
             <v-data-table
                 v-model="selected"
@@ -100,22 +101,26 @@ export default {
             this.dialog = false
             IssuesService.saveIssues(this.selected).then((response) => {
                 this.issues = response.data
+                this.getAllIssues()
             })
         },
         closeDialog(){
             this.dialog = false;
         },
         getAllIssues() {
+            // console.log("JA")
+            // console.log(this.search)
             IssuesService.getAllIssues(this.pageNum, this.pageSize).then((response) => {
                 const {issues, totalItems} = response.data;
+                // console.log("NEIN")
                 if(this.search === ""){
                     this.issues = issues
                     this.totalItems = totalItems
                 }else{
                     this.filterData()
                 }
-                console.log(this.issues)
-                console.log(totalItems)
+                // console.log(this.issues + " ALLLL")
+                // console.log(totalItems)
             })
         },
         getItemPerPage(val) {
